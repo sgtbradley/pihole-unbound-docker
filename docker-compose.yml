@@ -1,0 +1,37 @@
+version: "3"
+
+services:
+  unbound:
+    container_name: unbound
+    image: jazzakek/unbound:1.17.1
+    volumes:
+      - './unbound/conf/a-records.conf:/opt/unbound/etc/unbound/a-records.conf'
+      - './unbound/conf/forward-records.conf:/opt/unbound/etc/unbound/forward-records.conf'
+      - './unbound/conf/srv-records.conf:/opt/unbound/etc/unbound/srv-records.conf'
+    ports:
+      - "54:54"
+    restart: unless-stopped
+  pihole:
+    container_name: pihole
+    image: pihole/pihole:2023.03.1
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "67:67/udp"
+      - "80:80/tcp"
+    dns:
+      - 127.0.0.1
+      - unbound#54
+    environment:
+      TZ: 'Australia/Adelaide' #Enter your own time zone here
+      WEBPASSWORD: 'SET_A_SECURE_PASSWORD_HERE' #Fairly self-explanatory
+      DNS1: unbound#54 #Setting the pi-hole DNS upstream to be the unbound container
+      DNS2: unbound#54 #This second one must be here else pi-hole falls back to using google DNS as a secondary server
+    volumes:
+      - './pihole/conf:/etc/pihole'
+      - './pihole/dnsmasq.d:/etc/dnsmasq.d'
+    cap_add:
+      - NET_ADMIN
+    depends_on:
+      - unbound
+    restart: unless-stopped
